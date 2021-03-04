@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
 use App\Services\SocialAccountsService;
 use App\Models\Role;
+use App\Socialite\SocialiteProvider;
 
 class AuthController extends ApiBaseController
 {
@@ -140,7 +141,7 @@ class AuthController extends ApiBaseController
 
         $validator = Validator::make($request->all(), [
             'provider' => ['required', Rule::in(self::PROVIDERS)],
-            'token' => 'required',
+            'access_token' => 'required',
             'user_role' => ['required', Rule::in($roles_slug)],
         ]);
    
@@ -149,7 +150,12 @@ class AuthController extends ApiBaseController
         }
 
         try {
-            $providerUser = Socialite::driver($request->provider)->userFromToken($request->token);
+            $get_access_token = $request->access_token;
+            if($request->provider == 'google'){
+                $getAccessToken = (new SocialiteProvider($request->provider))->getAccessTokenResponseByRefresh($request->access_token);
+                $get_access_token = $getAccessToken['access_token'];
+            }
+            $providerUser = Socialite::driver($request->provider)->stateless()->userFromToken($get_access_token);
             
             if ($providerUser) {
                 $otherData = [];
